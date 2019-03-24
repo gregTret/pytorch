@@ -1,0 +1,178 @@
+<!DOCTYPE aesl-source>
+<network>
+
+
+<!--list of global events-->
+
+
+<!--list of constants-->
+<constant value="495" name="RIGHT_SPEED"/>
+<constant value="200" name="FIRST_SPEED"/>
+<constant value="500" name="LEFT_SPEED"/>
+<constant value="3800" name="PROX_DISTANCE"/>
+<constant value="100" name="TIME"/>
+<constant value="222" name="TURN_BACK"/>
+<constant value="500" name="TURN_SPEED"/>
+<constant value="100" name="MAX"/>
+<constant value="400" name="EDGE"/>
+
+
+<!--show keywords state-->
+<keywords flag="true"/>
+
+
+<!--node thymio-II-->
+<node nodeId="1" name="thymio-II">var state=-3
+var timer=0
+
+onevent button.forward
+	state=-2
+	timer=0
+	
+onevent button.backward
+	state=-1
+	callsub stop
+
+onevent prox
+	if  state==-2 then
+		timer++  
+		motor.left.target=LEFT_SPEED
+		motor.right.target=RIGHT_SPEED
+		if  timer>4 then
+			timer=0
+			state=0
+		end
+	end
+	if  state==0 then
+		callsub detected
+		callsub detectLine		
+	end
+	
+	if  state==1 then
+		callsub rotate
+	end
+	if  state==2 then
+		callsub detected
+		callsub getAround
+	end
+	if  state==3 then
+		callsub rotateBack
+	end
+	if  state==4 then
+	   callsub smooth
+	end
+	if  state==5 then
+		timer=0
+	   callsub findLine   
+	end
+	if  state==6 then
+		callsub rightTurn
+	end
+	if  state==-1 then
+		callsub stop
+	end
+	
+sub detectLine
+
+		if  prox.ground.delta[0]&lt;EDGE and prox.horizontal[1]&lt;EDGE then
+			motor.left.target=LEFT_SPEED
+			motor.right.target=RIGHT_SPEED
+		end
+		if prox.ground.delta[0]&lt;800 then
+			motor.right.target=RIGHT_SPEED
+			motor.left.target=FIRST_SPEED
+		end
+		if  prox.ground.delta[1]&lt;800 then
+			motor.right.target=FIRST_SPEED
+			motor.left.target=LEFT_SPEED
+		end
+		
+		return
+	
+sub rightTurn
+
+	motor.left.target=LEFT_SPEED
+	motor.right.target=-RIGHT_SPEED
+	
+	if  prox.ground.delta[0]&lt;800 or prox.ground.delta[1]&lt;800 then
+		state=0
+	end
+	
+	
+	
+	return
+		
+sub findLine
+	motor.left.target=FIRST_SPEED
+	motor.right.target=RIGHT_SPEED
+	
+	if prox.ground.delta[0]&lt;800 then
+		state=6
+	end 
+	if  prox.ground.delta[1]&lt;800 then
+		state=6
+	end
+	return
+		
+sub smooth
+	if  prox.horizontal[0]!=0 then
+		motor.right.target=-RIGHT_SPEED
+		motor.left.target=LEFT_SPEED
+	else 
+		state=5
+	end
+	
+	return	
+						
+sub getAround
+	timer++
+	if prox.ground.delta[0]&lt;400 then
+		state=6
+	end 
+	if  prox.ground.delta[1]&lt;400 then
+		state=6
+	end
+	if  timer&lt;TIME then
+		motor.right.target=TURN_SPEED
+		motor.left.target=TURN_BACK
+	else 
+		state=3	
+	end
+	return
+			
+sub rotate
+	if  prox.horizontal[0]+prox.horizontal[1]+prox.horizontal[2]+prox.horizontal[3]+prox.horizontal[4]>MAX then
+		motor.right.target=-RIGHT_SPEED
+		motor.left.target=LEFT_SPEED
+	else 
+		state=2
+	end
+	return	
+
+sub rotateBack
+	if  prox.horizontal[0]==0 then
+		motor.right.target=RIGHT_SPEED
+		motor.left.target=-LEFT_SPEED
+	else 
+		state=4
+	end
+	return	
+										
+sub detected
+	if  prox.horizontal[1]>PROX_DISTANCE or prox.horizontal[3]>PROX_DISTANCE or prox.horizontal[0]>PROX_DISTANCE or prox.horizontal[4]>PROX_DISTANCE then
+		#callsub stop
+		state=1
+	end
+	return
+	
+sub stop
+	motor.right.target=0
+	motor.left.target=0
+	return
+
+sub reset
+	state=0
+	timer=0</node>
+
+
+</network>
